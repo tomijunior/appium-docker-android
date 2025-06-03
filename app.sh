@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IMAGE="appium/appium"
+IMAGE="appium_android_jetson"
 
 if [ -z "$1" ]; then
 	read -p "Task (test|build|push) : " TASK
@@ -14,9 +14,15 @@ else
 	VER=$2
 fi
 
+if [ -z "$3" ]; then
+	read -p "USER_PASS : " USER_PASS
+else
+	USER_PASS=$3
+fi
+
 function build() {
 	echo "Build docker image with version \"${VER}\""
-	docker build --no-cache -t ${IMAGE}:${VER} -f Appium/Dockerfile Appium
+	docker build --build-arg USER_PASS=${USER_PASS} --no-cache -t ${IMAGE}:${VER} -f Appium/Dockerfile Appium
 	docker images
 }
 

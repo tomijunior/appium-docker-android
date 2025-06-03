@@ -1,4 +1,4 @@
-FROM ubuntu:focal-20250404
+FROM ubuntu:focal-20250404 AS build-stage 
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -51,7 +51,10 @@ RUN apt-get -qqy update && \
 #===============
 # Set JAVA_HOME
 #===============
-ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64" \
+ARG TARGETARCH
+# TARGETARCH is automatically set by the Docker build process based on the --platform flag used during the build. If no platform is specified, it defaults to the architecture of the build host.
+
+ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk-${TARGETARCH}" \
     PATH=$PATH:$JAVA_HOME/bin
 
 #===============================
@@ -81,20 +84,16 @@ WORKDIR /home/androidusr
 #=====================
 # Install Android SDK
 #=====================
-ENV SDK_VERSION=commandlinetools-linux-8512546_latest
-ENV ANDROID_BUILD_TOOLS_VERSION=34.0.0
-ENV ANDROID_FOLDER_NAME=cmdline-tools
-ENV ANDROID_DOWNLOAD_PATH=/home/androidusr/${ANDROID_FOLDER_NAME} \
-    ANDROID_HOME=/opt/android \
-    ANDROID_TOOL_HOME=/opt/android/${ANDROID_FOLDER_NAME}
+RUN apt-get -qqy --no-install-recommends install \
+    android-sdk \
+    android-sdk-build-tools \
+    android-sdk-platform-tools-common \
+&& rm -rf /var/lib/apt/lists/*
 
-RUN wget -O tools.zip https://dl.google.com/android/repository/${SDK_VERSION}.zip && \
-    unzip tools.zip && rm tools.zip && \
-    chmod a+x -R ${ANDROID_DOWNLOAD_PATH} && \
-    chown -R 1300:1301 ${ANDROID_DOWNLOAD_PATH} && \
-    mkdir -p ${ANDROID_TOOL_HOME} && \
-    mv ${ANDROID_DOWNLOAD_PATH} ${ANDROID_TOOL_HOME}/tools
-ENV PATH=$PATH:${ANDROID_TOOL_HOME}/tools:${ANDROID_TOOL_HOME}/tools/bin
+ENV ANDROID_BUILD_TOOLS_VERSION=34.0.0
+ENV ANDROID_HOME=/usr/lib/android-sdk 
+
+ENV PATH=$PATH:${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin
 
 # https://askubuntu.com/questions/885658/android-sdk-repositories-cfg-could-not-be-loaded
 RUN mkdir -p ~/.android && \
@@ -105,8 +104,9 @@ RUN mkdir -p ~/.android && \
     chown -R 1300:1301 .android
 ENV PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools
 
+
 #====================================
-# Install latest nodejs, npm, appium
+# Install latest nodejs, npm, appium, mjpeg-consumer
 # Using this workaround to install Appium -> https://github.com/appium/appium/issues/10020 -> Please remove this workaround asap
 #====================================
 ENV NODE_VERSION=22
@@ -120,12 +120,14 @@ RUN curl -sL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash && \
     apt-get autoremove --purge -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
     apt-get clean
+RUN npm i -g mjpeg-consumer
 
 #====================================================
 # Fix permission issue to download e.g. chromedriver
 #====================================================
 RUN chown -R 1300:1301 /usr/lib/node_modules/appium
 
+FROM build-stage AS final-stage
 #==============
 # Copy scripts
 #==============
