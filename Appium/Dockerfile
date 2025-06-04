@@ -48,9 +48,6 @@ RUN apt-get -qqy update && \
     xvfb \
     zip \
     ffmpeg \
-    android-sdk \
-    android-sdk-build-tools \
-    android-sdk-platform-tools-common \
   && rm -rf /var/lib/apt/lists/*
 
 #===============
@@ -89,9 +86,28 @@ WORKDIR /home/androidusr
 #=====================
 # Install Android SDK
 #=====================
+ENV SDK_VERSION=commandlinetools-linux-8512546_latest
 ENV ANDROID_BUILD_TOOLS_VERSION=34.0.0
-ENV ANDROID_HOME=/usr/lib/android-sdk 
-ENV PATH=$PATH:${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin
+ENV ANDROID_FOLDER_NAME=cmdline-tools
+ENV ANDROID_DOWNLOAD_PATH=/home/androidusr/${ANDROID_FOLDER_NAME} \
+    ANDROID_HOME=/opt/android \
+    ANDROID_TOOL_HOME=/opt/android/${ANDROID_FOLDER_NAME}
+
+RUN wget -O tools.zip https://dl.google.com/android/repository/${SDK_VERSION}.zip && \
+    unzip tools.zip && rm tools.zip && \
+    chmod a+x -R ${ANDROID_DOWNLOAD_PATH} && \
+    chown -R ${UID}:${GID} ${ANDROID_DOWNLOAD_PATH} && \
+    mkdir -p ${ANDROID_TOOL_HOME} && \
+    mv ${ANDROID_DOWNLOAD_PATH} ${ANDROID_TOOL_HOME}/tools
+ENV PATH=$PATH:${ANDROID_TOOL_HOME}/tools:${ANDROID_TOOL_HOME}/tools/bin
+
+# https://askubuntu.com/questions/885658/android-sdk-repositories-cfg-could-not-be-loaded
+RUN mkdir -p ~/.android && \
+    touch ~/.android/repositories.cfg && \
+    echo y | sdkmanager "platform-tools" && \
+    echo y | sdkmanager "build-tools;$ANDROID_BUILD_TOOLS_VERSION" && \
+    mv ~/.android .android && \
+    chown -R ${UID}:${GID} .android
 ENV PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools
 
 
