@@ -15,14 +15,14 @@ else
 fi
 
 if [ -z "$3" ]; then
-	read -p "USER_PASS : " USER_PASS
+	read -s -p "USER_PASS : " USER_PASS
 else
 	USER_PASS=$3
 fi
 
 function build() {
 	echo "Build docker image with version \"${VER}\""
-	docker build --build-arg USER_PASS=${USER_PASS} --no-cache -t ${IMAGE}:${VER} -f Appium/Dockerfile Appium
+	docker build --build-arg UID=$(id -u)  --build-arg GID=$(id -g) --build-arg USER_PASS=${USER_PASS} --no-cache -t ${IMAGE}:${VER} -f Appium/Dockerfile Appium
 	docker images
 }
 

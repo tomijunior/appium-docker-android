@@ -1,6 +1,8 @@
 FROM ubuntu:focal-20250404 AS build-stage 
 
 ENV DEBIAN_FRONTEND=noninteractive
+ARG UID=1300
+ARG GID=1301
 
 #==================
 # General Packages
@@ -46,6 +48,9 @@ RUN apt-get -qqy update && \
     xvfb \
     zip \
     ffmpeg \
+    android-sdk \
+    android-sdk-build-tools \
+    android-sdk-platform-tools-common \
   && rm -rf /var/lib/apt/lists/*
 
 #===============
@@ -53,7 +58,7 @@ RUN apt-get -qqy update && \
 #===============
 ARG TARGETARCH
 # TARGETARCH is automatically set by the Docker build process based on the --platform flag used during the build. If no platform is specified, it defaults to the architecture of the build host.
-
+ENV ARCH="${TARGETARCH}"
 ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk-${TARGETARCH}" \
     PATH=$PATH:$JAVA_HOME/bin
 
@@ -69,10 +74,10 @@ RUN echo "${TZ}" > /etc/timezone \
 #===============
 ARG USER_PASS=secret
 RUN groupadd androidusr \
-         --gid 1301 \
+         --gid ${GID} \
   && useradd androidusr \
-         --uid 1300 \
-         --gid 1301 \
+         --uid ${UID} \
+         --gid ${GID} \
          --create-home \
          --shell /bin/bash \
   && usermod -aG sudo androidusr \
@@ -84,24 +89,9 @@ WORKDIR /home/androidusr
 #=====================
 # Install Android SDK
 #=====================
-RUN apt-get -qqy --no-install-recommends install \
-    android-sdk \
-    android-sdk-build-tools \
-    android-sdk-platform-tools-common \
-&& rm -rf /var/lib/apt/lists/*
-
 ENV ANDROID_BUILD_TOOLS_VERSION=34.0.0
 ENV ANDROID_HOME=/usr/lib/android-sdk 
-
 ENV PATH=$PATH:${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin
-
-# https://askubuntu.com/questions/885658/android-sdk-repositories-cfg-could-not-be-loaded
-RUN mkdir -p ~/.android && \
-    touch ~/.android/repositories.cfg && \
-    echo y | sdkmanager "platform-tools" && \
-    echo y | sdkmanager "build-tools;$ANDROID_BUILD_TOOLS_VERSION" && \
-    mv ~/.android .android && \
-    chown -R 1300:1301 .android
 ENV PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools
 
 
@@ -125,7 +115,7 @@ RUN npm i -g mjpeg-consumer
 #====================================================
 # Fix permission issue to download e.g. chromedriver
 #====================================================
-RUN chown -R 1300:1301 /usr/lib/node_modules/appium
+RUN chown -R ${UID}:${GID} /usr/lib/node_modules/appium
 
 FROM build-stage AS final-stage
 #==============
@@ -138,13 +128,13 @@ COPY start.sh \
      wireless_autoconnect.sh \
      wireless_connect.sh \
      ${SCRIPT_PATH}/
-RUN chown -R 1300:1301 ${SCRIPT_PATH}
+RUN chown -R ${UID}:${GID} ${SCRIPT_PATH}
 ENV APP_PATH=/home/androidusr/${SCRIPT_PATH}
 
 #==================
 # Use created user
 #==================
-USER 1300:1301
+USER ${UID}:${GID}
 
 #===============================
 # Install basic Android drivers

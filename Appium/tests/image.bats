@@ -1,14 +1,14 @@
 #!/usr/bin/env bats
 
 @test '[Docker] Verify Java is installed' {
-    [ ${JAVA_HOME} == "/usr/lib/jvm/java-11-openjdk-amd64" ]
+    [ ${JAVA_HOME} == "/usr/lib/jvm/java-11-openjdk-${ARCH}" ]
     java_ver=$(java -version 2>&1)
     [[ ${java_ver} == *"openjdk"* ]]
     [[ ${java_ver} == *"11"* ]]
 }
 
 @test '[Docker] Verify Android SDK is installed' {
-    [ ${ANDROID_HOME} == "/opt/android" ]
+    [ ${ANDROID_HOME} == "/usr/lib/android-sdk" ]
 
     android_list_sdk=$(sdkmanager --list)
     [[ ${android_list_sdk} == *"Installed packages:"* ]]
