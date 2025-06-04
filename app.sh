@@ -15,7 +15,13 @@ else
 fi
 
 if [ -z "$3" ]; then
-	read -s -p "USER_PASS : " USER_PASS
+	read -s -p "User Password : " USER_PASS
+	printf "\n"
+	read -s -p "Retype User Password : " USER_PASS1
+	if [[ "$USER_PASS" != "$USER_PASS1" ]]; then
+		echo "User Password is not equal"
+		exit 1
+	fi
 else
 	USER_PASS=$3
 fi

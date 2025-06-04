@@ -1,10 +1,10 @@
 #!/usr/bin/env bats
 
 @test '[Docker] Verify Java is installed' {
-    [ ${JAVA_HOME} == "/usr/lib/jvm/java-11-openjdk-${ARCH}" ]
+    [ ${JAVA_HOME} == "/usr/lib/jvm/java-17-openjdk-${ARCH}" ]
     java_ver=$(java -version 2>&1)
     [[ ${java_ver} == *"openjdk"* ]]
-    [[ ${java_ver} == *"11"* ]]
+    [[ ${java_ver} == *"17"* ]]
 }
 
 @test '[Docker] Verify Android SDK is installed' {

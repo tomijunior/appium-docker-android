@@ -40,7 +40,7 @@ RUN apt-get -qqy update && \
     gnupg \
     libgconf-2-4 \
     libqt5webkit5 \
-    openjdk-11-jdk \
+    openjdk-17-jdk \
     sudo \
     tzdata \
     unzip \
@@ -48,6 +48,7 @@ RUN apt-get -qqy update && \
     xvfb \
     zip \
     ffmpeg \
+    xz-utils \
   && rm -rf /var/lib/apt/lists/*
 
 #===============
@@ -56,7 +57,7 @@ RUN apt-get -qqy update && \
 ARG TARGETARCH
 # TARGETARCH is automatically set by the Docker build process based on the --platform flag used during the build. If no platform is specified, it defaults to the architecture of the build host.
 ENV ARCH="${TARGETARCH}"
-ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk-${TARGETARCH}" \
+ENV JAVA_HOME="/usr/lib/jvm/java-17-openjdk-${TARGETARCH}" \
     PATH=$PATH:$JAVA_HOME/bin
 
 #===============================
@@ -86,8 +87,8 @@ WORKDIR /home/androidusr
 #=====================
 # Install Android SDK
 #=====================
-ENV SDK_VERSION=commandlinetools-linux-8512546_latest
-ENV ANDROID_BUILD_TOOLS_VERSION=34.0.0
+ENV SDK_VERSION=commandlinetools-linux-11076708_latest
+ENV ANDROID_BUILD_TOOLS_VERSION=34.0.4
 ENV ANDROID_FOLDER_NAME=cmdline-tools
 ENV ANDROID_DOWNLOAD_PATH=/home/androidusr/${ANDROID_FOLDER_NAME} \
     ANDROID_HOME=/opt/android \
@@ -104,12 +105,30 @@ ENV PATH=$PATH:${ANDROID_TOOL_HOME}/tools:${ANDROID_TOOL_HOME}/tools/bin
 # https://askubuntu.com/questions/885658/android-sdk-repositories-cfg-could-not-be-loaded
 RUN mkdir -p ~/.android && \
     touch ~/.android/repositories.cfg && \
-    echo y | sdkmanager "platform-tools" && \
-    echo y | sdkmanager "build-tools;$ANDROID_BUILD_TOOLS_VERSION" && \
+    yes | sdkmanager --licenses && \
     mv ~/.android .android && \
     chown -R ${UID}:${GID} .android
-ENV PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools
 
+#build-tools
+RUN wget -O build-tools.tar.xz https://github.com/AndroidIDEOfficial/androidide-tools/releases/download/v34.0.4/build-tools-34.0.4-aarch64.tar.xz && \
+    tar xf build-tools.tar.xz && rm build-tools.tar.xz && \
+    chmod a+x -R build-tools && \
+    mv build-tools ${ANDROID_HOME}/
+ENV PATH=$PATH:${ANDROID_HOME}/build-tools/34.0.4
+
+#platform-tools
+RUN wget -O platform-tools.tar.xz https://github.com/AndroidIDEOfficial/androidide-tools/releases/download/v34.0.4/platform-tools-34.0.4-aarch64.tar.xz && \
+    tar xf platform-tools.tar.xz && rm platform-tools.tar.xz && \
+    chmod a+x -R platform-tools && \
+    mv platform-tools ${ANDROID_HOME}/
+ENV PATH=$PATH:${ANDROID_HOME}/platform-tools
+
+RUN wget -O emulator.zip https://github.com/tomijunior/sdk-repo-linux_aarch64/releases/download/emulator/sdk-repo-linux_aarch64-emulator-13288691.zip && \
+    unzip -qq emulator.zip -d ${ANDROID_HOME}/ && rm emulator.zip 
+ENV PATH=$PATH:${ANDROID_HOME}/emulator
+
+# Edit the XML <revision> tag at the end with your emulator version
+RUN curl 'https://chromium.googlesource.com/android_tools/+/refs/heads/main/sdk/emulator/package.xml?format=TEXT' | base64 -d > ${ANDROID_HOME}/emulator/package.xml
 
 #====================================
 # Install latest nodejs, npm, appium, mjpeg-consumer
