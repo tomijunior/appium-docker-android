@@ -33,22 +33,22 @@ ARG GID=1301
 #   Make a zip file
 #==================
 RUN apt-get -qqy update && \
-    apt dist-upgrade -y && \
-    apt-get -qqy --no-install-recommends install \
-    ca-certificates \
-    curl \
-    gnupg \
-    libgconf-2-4 \
-    libqt5webkit5 \
-    openjdk-17-jdk \
-    sudo \
-    tzdata \
-    unzip \
-    wget \
-    xvfb \
-    zip \
-    ffmpeg \
-    xz-utils \
+  apt dist-upgrade -y && \
+  apt-get -qqy --no-install-recommends install \
+  ca-certificates \
+  curl \
+  gnupg \
+  libgconf-2-4 \
+  libqt5webkit5 \
+  openjdk-17-jdk \
+  sudo \
+  tzdata \
+  unzip \
+  wget \
+  xvfb \
+  zip \
+  ffmpeg \
+  xz-utils \
   && rm -rf /var/lib/apt/lists/*
 
 #===============
@@ -59,7 +59,7 @@ ARG TARGETARCH
 ENV ARCH="${TARGETARCH}"
 ENV JAVA_HOME="/usr/lib/jvm/java-17-openjdk-${TARGETARCH}" 
 ENV PATH=$PATH:$JAVA_HOME/bin
-ENV ANDROID_HOME=/home/androidusr/android-sdk
+ENV ANDROID_HOME=/opt/android
 
 #===============================
 # Set Timezone (UTC as default)
@@ -73,12 +73,12 @@ RUN echo "${TZ}" > /etc/timezone \
 #===============
 ARG USER_PASS=secret
 RUN groupadd androidusr \
-         --gid ${GID} \
+  --gid ${GID} \
   && useradd androidusr \
-         --uid ${UID} \
-         --gid ${GID} \
-         --create-home \
-         --shell /bin/bash \
+  --uid ${UID} \
+  --gid ${GID} \
+  --create-home \
+  --shell /bin/bash \
   && usermod -aG sudo androidusr \
   && echo androidusr:${USER_PASS} | chpasswd \
   && echo 'androidusr ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers \
@@ -100,14 +100,15 @@ USER ${UID}:${GID}
 
 #build-tools
 RUN cd ${ANDROID_HOME} && \
-    wget -q -O build-tools.tar.xz https://github.com/AndroidIDEOfficial/androidide-tools/releases/download/v34.0.4/build-tools-34.0.4-aarch64.tar.xz && \
-    tar xf build-tools.tar.xz && rm build-tools.tar.xz && \
-    chmod a+x -R build-tools 
+  wget -q -O build-tools.tar.xz https://github.com/AndroidIDEOfficial/androidide-tools/releases/download/v34.0.4/build-tools-34.0.4-aarch64.tar.xz && \
+  tar xf build-tools.tar.xz && rm build-tools.tar.xz && \
+  chmod a+x -R build-tools 
 
 #platform-tools
-RUN wget -q -O platform-tools.tar.xz https://github.com/AndroidIDEOfficial/androidide-tools/releases/download/v34.0.4/platform-tools-34.0.4-aarch64.tar.xz && \
-    tar xf platform-tools.tar.xz && rm platform-tools.tar.xz && \
-    chmod a+x -R platform-tools 
+RUN cd ${ANDROID_HOME} && \
+  wget -q -O platform-tools.tar.xz https://github.com/AndroidIDEOfficial/androidide-tools/releases/download/v34.0.4/platform-tools-34.0.4-aarch64.tar.xz && \
+  tar xf platform-tools.tar.xz && rm platform-tools.tar.xz && \
+  chmod a+x -R platform-tools 
 
 FROM build-base AS final-stage
 
@@ -116,9 +117,9 @@ ENV PATH=$PATH:${ANDROID_HOME}/build-tools/34.0.4:${ANDROID_HOME}/platform-tools
 
 # https://askubuntu.com/questions/885658/android-sdk-repositories-cfg-could-not-be-loaded
 RUN mkdir -p ~/.android && \
-    touch ~/.android/repositories.cfg && \
-    mv ~/.android .android && \
-    chown -R ${UID}:${GID} .android
+  touch ~/.android/repositories.cfg && \
+  mv ~/.android .android && \
+  chown -R ${UID}:${GID} .android
 
 #====================================
 # Install latest nodejs, npm, appium, mjpeg-consumer
@@ -127,16 +128,16 @@ RUN mkdir -p ~/.android && \
 ENV NODE_VERSION=22
 ENV APPIUM_VERSION=2.18.0
 RUN cd /home/androidusr && \
-    curl -sL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash && \
-    apt-get -qqy install nodejs && \
-    npm install -g appium@${APPIUM_VERSION} && \
-    npm install -g mjpeg-consumer && \
-    exit 0 && \
-    npm cache clean && \
-    apt-get remove --purge -y npm curl wget unzip && \
-    apt-get autoremove --purge -y && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
-    apt-get clean
+  curl -sL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash && \
+  apt-get -qqy install nodejs && \
+  npm install -g appium@${APPIUM_VERSION} && \
+  npm install -g mjpeg-consumer && \
+  exit 0 && \
+  npm cache clean && \
+  apt-get remove --purge -y npm curl wget unzip && \
+  apt-get autoremove --purge -y && \
+  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+  apt-get clean
 
 #====================================================
 # Fix permission issue to download e.g. chromedriver
@@ -149,10 +150,10 @@ RUN chown -R ${UID}:${GID} /usr/lib/node_modules/appium
 ENV SCRIPT_PATH="appium-docker-android"
 RUN mkdir -p ${SCRIPT_PATH}
 COPY start.sh \
-     generate_selenium_config.sh \
-     wireless_autoconnect.sh \
-     wireless_connect.sh \
-     ${SCRIPT_PATH}/
+  generate_selenium_config.sh \
+  wireless_autoconnect.sh \
+  wireless_connect.sh \
+  ${SCRIPT_PATH}/
 RUN chown -R ${UID}:${GID} ${SCRIPT_PATH}
 ENV APP_PATH=/home/androidusr/${SCRIPT_PATH}
 
