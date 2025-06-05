@@ -26,9 +26,15 @@ else
 	USER_PASS=$3
 fi
 
+if [ -z "$4" ]; then
+	CACHE=""
+else
+	CACHE=$4
+fi
+
 function build() {
 	echo "Build docker image with version \"${VER}\""
-	docker build --build-arg UID=$(id -u)  --build-arg GID=$(id -g) --build-arg USER_PASS=${USER_PASS} --no-cache -t ${IMAGE}:${VER} -f Appium/Dockerfile Appium
+	docker build --build-arg UID=$(id -u)  --build-arg GID=$(id -g) --build-arg USER_PASS=${USER_PASS}  ${CACHE} -t ${IMAGE}:${VER} -f Appium/Dockerfile Appium
 	docker images
 }
 
