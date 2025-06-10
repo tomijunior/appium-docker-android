@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#check appium is installed
+echo "Check appium installation"
+npm list | grep appium || npm install appium@2.18.0 && appium driver install --source=npm appium-uiautomator2-driver@4.2.3
+
 # It is workaround to access adb from androidusr
 echo "Prepare adb to have access to device"
 adb devices >/dev/null
