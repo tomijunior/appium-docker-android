@@ -15,6 +15,12 @@ else
 fi
 
 if [ -z "$3" ]; then
+	CACHE=""
+else
+	CACHE="--no-cache"
+fi
+
+if [ -z "$4" ]; then
 	read -s -p "User Password : " USER_PASS
 	printf "\n"
 	read -s -p "Retype User Password : " USER_PASS1
@@ -23,13 +29,7 @@ if [ -z "$3" ]; then
 		exit 1
 	fi
 else
-	USER_PASS=$3
-fi
-
-if [ -z "$4" ]; then
-	CACHE=""
-else
-	CACHE=$4
+	USER_PASS=$4
 fi
 
 function build() {

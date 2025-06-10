@@ -113,36 +113,50 @@ RUN cd ${ANDROID_HOME} && \
 FROM build-base AS final-stage
 
 COPY --from=second-stage ${ANDROID_HOME} ${ANDROID_HOME}
-ENV PATH=$PATH:${ANDROID_HOME}/build-tools/34.0.4:${ANDROID_HOME}/platform-tools
-
-# https://askubuntu.com/questions/885658/android-sdk-repositories-cfg-could-not-be-loaded
-RUN mkdir -p ~/.android && \
-  touch ~/.android/repositories.cfg && \
-  mv ~/.android .android && \
-  chown -R ${UID}:${GID} .android
 
 #====================================
 # Install latest nodejs, npm, appium, mjpeg-consumer
 # Using this workaround to install Appium -> https://github.com/appium/appium/issues/10020 -> Please remove this workaround asap
 #====================================
-ENV NODE_VERSION=22
-ENV APPIUM_VERSION=2.18.0
-RUN cd /home/androidusr && \
-  curl -sL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash && \
+ENV PATH=$PATH:${ANDROID_HOME}/build-tools/34.0.4:${ANDROID_HOME}/platform-tools \
+  NODE_VERSION=22 \
+  NPM_PACKAGES=/home/androidusr/npm \
+  NODE_PATH=/usr/lib/node_modules
+#ENV APPIUM_VERSION=2.18.0
+RUN curl -sL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash && \
   apt-get -qqy install nodejs && \
-  npm install -g appium@${APPIUM_VERSION} && \
-  npm install -g mjpeg-consumer && \
+#  npm install -g appium@${APPIUM_VERSION} && \
+#  npm install -g mjpeg-consumer && \
   exit 0 && \
-  npm cache clean && \
-  apt-get remove --purge -y npm curl wget unzip && \
+  mkdir -p ${NPM_PACKAGES} && \
+  chown -R ${UID}:${GID} ${NPM_PACKAGES} && \
+  npm config set prefix ${NPM_PACKAGES} && \
+  npm install -g npm && \
+  npm cache clean --force && \
+  apt-get remove --purge -y npm && \
   apt-get autoremove --purge -y && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
   apt-get clean
 
+ENV PATH=$PATH:$NPM_PACKAGES/bin \
+  NODE_PATH=$NPM_PACKAGES/lib/node_modules:$NODE_PATH \
+  MANPATH=$NPM_PACKAGES/share/man 
+
+#==================
+# Use created user
+#==================
+
+USER ${UID}:${GID}
+
+# https://askubuntu.com/questions/885658/android-sdk-repositories-cfg-could-not-be-loaded
+RUN mkdir -p ~/.android && \
+  touch ~/.android/repositories.cfg 
+   
+
 #====================================================
 # Fix permission issue to download e.g. chromedriver
 #====================================================
-RUN chown -R ${UID}:${GID} /usr/lib/node_modules/appium
+#RUN chown -R ${UID}:${GID} /usr/lib/node_modules/appium
 
 #==============
 # Copy scripts
@@ -154,19 +168,13 @@ COPY start.sh \
   wireless_autoconnect.sh \
   wireless_connect.sh \
   ${SCRIPT_PATH}/
-RUN chown -R ${UID}:${GID} ${SCRIPT_PATH}
 ENV APP_PATH=/home/androidusr/${SCRIPT_PATH}
-
-#==================
-# Use created user
-#==================
-USER ${UID}:${GID}
 
 #===============================
 # Install basic Android drivers
 #===============================
-ENV APPIUM_DRIVER_UIAUTOMATOR2_VERSION="4.2.3"
-RUN appium driver install --source=npm appium-uiautomator2-driver@${APPIUM_DRIVER_UIAUTOMATOR2_VERSION}
+#ENV APPIUM_DRIVER_UIAUTOMATOR2_VERSION="4.2.3"
+#RUN appium driver install --source=npm appium-uiautomator2-driver@${APPIUM_DRIVER_UIAUTOMATOR2_VERSION}
 
 #===============
 # Expose Port
